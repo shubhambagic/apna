@@ -1,0 +1,1473 @@
+coding Standards:
+
+making coding easier for teams to read and maintain the code.
+maintain coding slandered helps in reducing bugs and improving the overall quality of the software.
+descriptive naming for variables, procedures, functions, tables
+organizing code into logical sections, using indentation, and commenting effectively to enhance readability.
+consistent error handling practices to ensure robustness.
+
+In my experience as a PL/SQL developer, I believe coding standards are crucial for maintaining a high-quality codebase.
+They promote consistency, which makes it easier for team members to understand and collaborate on the code. For instance,
+I always follow naming conventions and ensure that my code is well-structured and commented. In a previous project,
+adhering to these standards helped us reduce bugs significantly and improved our deployment speed.
+I’m also open to adapting to the specific standards of your organization to ensure seamless integration with the team.
+------------------------------------------------------------------------------------------------------------
+what is oracle dbms scheduler?
+
+Oracle DBMS Scheduler is a powerful tool that allows you to automate and manage jobs in an Oracle database. 
+It enables you to schedule tasks such as running PL/SQL blocks, executing stored procedures, or even running operating system scripts.
+The Scheduler is designed to handle complex scheduling needs and can manage jobs based on various criteria, including time, events, 
+and resource availability.
+
+BEGIN
+    DBMS_SCHEDULER.create_job (
+        job_name        => 'MY_PLSQL_JOB',
+        job_type        => 'PLSQL_BLOCK',
+        job_action      => 'BEGIN DBMS_OUTPUT.put_line(''Hello, World!''); END;',
+        start_date      => SYSTIMESTAMP,
+        repeat_interval  => 'FREQ=DAILY; BYHOUR=10; BYMINUTE=0; BYSECOND=0',
+        enabled         => TRUE
+        auto_drop       => FALSE,
+        comments        => 'test'
+    );
+END;
+
+Breakdown of the Example:
+
+job_name: The name of the job (MY_PLSQL_JOB).
+job_type: Specifies that this job will execute a PL/SQL block.(PLSQL_BLOCK,STORED_PROCEDURE,EXECUTABLE,CHAIN)
+job_action: The actual PL/SQL code to run.
+start_date: When the job should start (immediately in this case).
+repeat_interval: This job is set to run daily at 10:00 AM.
+enabled: This parameter activates the job upon creation.
+
+-----------------------------------------------------------------------------------------------------------------
+
+What is an External Table in Oracle?
+An external table in Oracle is a special type of table that allows you to access data stored in flat files outside
+the database as if it were stored in a regular database table. This feature is particularly useful for data integration tasks, 
+such as ETL (Extract, Transform, Load) processes, where you need to read data from files without loading it into the database first.
+
+CREATE TABLE languages (
+    language_id INT,
+    language_name VARCHAR2(30)
+)
+ORGANIZATION EXTERNAL (
+    TYPE ORACLE_LOADER
+    DEFAULT DIRECTORY lang_external
+    ACCESS PARAMETERS (FIELDS TERMINATED BY ',')
+    LOCATION ('languages.csv')
+);
+
+----------------------------------------------
+nth highest salary
+
+window function
+
+select * from (select empno,ename,dense_rank()over(partition by deptno order by sal desc )r1 from emp)
+where r1=2
+
+
+corelated query
+
+select empno,ename,sal from emp e1 where 2=(select count(distinct sal) from emp e2 where e2.sal>e1.sal )group by  empno,ename,sal
+
+
+-------------------------------------------
+duplicate row delete
+
+1. Using ROWID
+
+DELETE FROM your_table
+ WHERE ROWID NOT IN (SELECT MIN(ROWID)
+                       FROM your_table
+                      GROUP BY column1, column2);
+
+2.Using ROW_NUMBER() with Analytic Functions
+
+DELETE FROM your_table
+WHERE ROWID IN (
+    SELECT ROWID FROM ( SELECT ROWID, ROW_NUMBER() OVER (PARTITION BY column1, column2 ORDER BY column1) AS rnum 
+                       FROM your_table)
+       WHERE rnum > 1);
+
+3. Using Self-Join
+
+DELETE FROM your_table a
+WHERE EXISTS (
+    SELECT 1
+    FROM your_table b
+    WHERE a.column1 = b.column1
+      AND a.ROWID > b.ROWID  -- Keep the first occurrence
+);
+
+4. Using a Temporary Table
+
+CREATE TABLE temp_table AS
+SELECT DISTINCT * FROM your_table;
+
+DELETE FROM your_table;
+
+INSERT INTO your_table SELECT * FROM temp_table;
+
+DROP TABLE temp_table;
+
+
+5. Deleting Duplicates Using a FOR Loop
+
+DECLARE
+    CURSOR c1 IS
+        SELECT ROWID AS rid, numbers
+        FROM your_table
+        ORDER BY numbers;
+
+    v_previous_number your_table.numbers%TYPE;
+BEGIN
+    FOR rec IN c1 LOOP
+        -- Check if the current number is the same as the previous one
+        IF rec.numbers = v_previous_number THEN
+            -- Delete the duplicate record
+            DELETE FROM your_table WHERE ROWID = rec.rid;
+        ELSE
+            -- Update the previous number to the current one
+            v_previous_number := rec.numbers;
+        END IF;
+    END LOOP;
+
+    COMMIT; -- Commit the changes
+END;
+
+-------------
+
+cursor in oracle.
+
+In Oracle, a cursor is a database object that allows you to retrieve and manipulate data row by row.
+It acts as a pointer to the context area where SQL statements are processed. 
+There are two main types of cursors in PL/SQL: 
+implicit cursors
+explicit cursors
+
+
+1. Implicit Cursors
+These are automatically created by Oracle when you execute a SQL statement that returns a single row or performs a DML operation 
+like (INSERT, UPDATE, DELETE). You don’t need to declare them explicitly.
+For example:
+
+DECLARE
+    v_employee_name employees.first_name%TYPE;
+BEGIN
+    SELECT first_name INTO v_employee_name FROM employees WHERE employee_id = 100;
+    DBMS_OUTPUT.PUT_LINE('Employee Name: ' || v_employee_name);
+END;
+
+
+
+
+------------
+
+The PRAGMA EXCEPTION_INIT in Oracle PL/SQL is a powerful directive used to associate a user-defined exception with a specific Oracle error code. 
+This allows for more readable and manageable error handling in your PL/SQL code.
+
+Example of RAISE_APPLICATION_ERROR in Oracle
+
+The RAISE_APPLICATION_ERROR procedure allows you to generate user-defined error messages in PL/SQL. 
+This is useful for enforcing business rules and providing meaningful feedback when an error occurs.
+
+declare
+
+v_name varchar2(10);
+v_name_error exception;
+
+pragma exception_init(v_name_error,-1000000);
+
+begin
+  
+select name
+  into v_name
+  from mangesh
+ where name = 'mangesh'
+   and rownum = '1';
+
+IF v_name='mangesh' then
+  raise v_name_error;
+END IF;  
+
+  IF l_customer_credit > l_credit_limit THEN
+        RAISE_APPLICATION_ERROR(-20111, 'Credit Limit Exceeded for Customer ID: ' || l_customer_id);
+  END IF;
+
+
+exception 
+  
+  when v_name_error then
+  dbms_output.put_line('name is not mangesh'||sqlerrm);
+  
+ 
+end;
+
+
+Benefits:
+Clarity: It makes your error handling clearer and more specific.
+Control: You can manage exceptions in a way that is tailored to your application’s needs.
+
+
+Autonomous Transactions in Oracle
+
+
+Autonomous transactions are a special feature in Oracle PL/SQL that allow a transaction to execute independently of the main
+transaction that initiated it. This means you can perform operations, commit or roll back changes, and return control to the main 
+transaction without affecting its state.
+
+
+Key Concepts:
+
+Independence: An autonomous transaction runs in its own context. Changes made in this transaction do not affect the main transaction until
+              the autonomous transaction is committed.
+
+Usage: Commonly used for:
+
+Error logging: Ensuring that error messages are recorded even if the main transaction fails.
+
+Auditing: Keeping track of actions without interfering with the main transaction.
+
+Syntax: To define an autonomous transaction, you use the PRAGMA AUTONOMOUS_TRANSACTION directive within a PL/SQL block:
+
+
+--------------------------------------------
+Example of a Materialized View in Oracle
+A materialized view is a database object that stores the results of a query and can be refreshed periodically.
+ This is particularly useful for improving performance in data retrieval, especially in data warehousing scenarios.
+
+To create a materialized view log on a base table in Oracle, you can use the CREATE MATERIALIZED VIEW LOG statement. 
+This log is essential for enabling fast refreshes of materialized views by capturing changes made to the base table.
+
+-- Create a materialized view to store employee data
+CREATE MATERIALIZED VIEW employee_mv
+BUILD IMMEDIATE
+REFRESH FAST ON DEMAND
+AS
+SELECT employee_id, first_name, last_name, department_id
+FROM employees;
+
+
+CREATE MATERIALIZED VIEW LOG ON employees
+WITH PRIMARY KEY
+INCLUDING NEW VALUES;
+
+
+EXEC DBMS_MVIEW.REFRESH('employee_mv');
+
+Complete: Rebuilds everything; slower but thorough.
+Fast: Updates only changes; faster and efficient.
+Force: Tries fast first, then complete if needed; flexible approach.
+
+--------------------------------------------
+
+REF CURSOR in Oracle
+
+A REF CURSOR is a cursor variable that allows you to reference a cursor result set in PL/SQL. 
+It provides flexibility in handling query results, enabling you to pass cursor variables between procedures and functions.
+
+Types of REF CURSOR
+Strongly Typed REF CURSOR: This type is associated with a specific row type.
+Weakly Typed REF CURSOR: This type does not have a specific row type associated with it.
+
+Strongly Typed REF CURSOR
+
+Definition: A strongly typed REF CURSOR is associated with a specific return type, meaning it is defined to return a specific 
+structure (e.g., a specific row type).
+
+Error Checking: The PL/SQL compiler performs type checking, ensuring that the cursor can only be associated with queries that return 
+compatible data types. This reduces the risk of runtime errors.
+
+DECLARE
+    TYPE emp_ref_cursor IS REF CURSOR RETURN employees%ROWTYPE;
+    emp_cursor emp_ref_cursor;
+BEGIN
+    OPEN emp_cursor FOR SELECT * FROM employees;
+END;
+
+Weakly Typed REF CURSOR
+
+Definition: A weakly typed REF CURSOR does not have a specific return type associated with it. It can be used to reference any query 
+result set at runtime.
+Flexibility: This type is more flexible because it can be associated with any query, regardless of the structure of the returned data. 
+However, this flexibility comes at the cost of type safety.
+
+DECLARE
+    TYPE emp_ref_cursor IS REF CURSOR;
+    emp_cursor emp_ref_cursor;
+BEGIN
+    OPEN emp_cursor FOR SELECT employee_id, first_name FROM employees;
+END;
+
+
+
+-------------------------------------------------------------------------------------------------------------------------------
+
+
+Temporary Tables in Oracle
+
+In Oracle, temporary tables are special types of tables that store data temporarily for the duration of a session or transaction. 
+They are useful for managing intermediate results and can help improve performance in certain scenarios.
+
+Types of Temporary Tables
+
+Global Temporary Tables (GTT):
+Definition: These are permanent database objects that store data temporarily. The structure of the table is permanent, 
+but the data is session-specific or transaction-specific.
+Data Visibility: Each session can only see its own data. Data inserted by one session is not visible to others.
+Persistence Options:
+ON COMMIT DELETE ROWS: Data is deleted at the end of each transaction (commit).
+ON COMMIT PRESERVE ROWS: Data persists for the duration of the session and is only deleted when the session ends.
+Example:
+SQL
+
+CREATE GLOBAL TEMPORARY TABLE temp_employees (
+    employee_id NUMBER,
+    employee_name VARCHAR2(100)
+) ON COMMIT PRESERVE ROWS;
+
+ 
+Private Temporary Tables (introduced in Oracle 18c):
+
+Definition: These are similar to global temporary tables but are automatically dropped at the end of the session or transaction. 
+They are only visible to the session that created them.
+Usage: Useful for temporary data that does not need to persist beyond the session.
+Key Features
+Performance: Temporary tables can improve performance by reducing the need for repeated calculations and by minimizing the 
+amount of data stored in permanent tables.
+
+Data Management: They allow for complex data manipulations without affecting the main database tables.
+Indexes: You can create indexes on temporary tables, which can further enhance performance.
+
+
+
+
+------------------------------------------------------------------------------------------
+
+What is a Tablespace in Oracle?
+A tablespace in Oracle is a logical storage unit that groups related logical structures together. It serves as a container for database 
+objects such as tables, indexes, and clusters. Understanding tablespaces is crucial for managing storage and optimizing performance in an Oracle database.
+
+Key Features of Tablespaces:
+Logical Structure: Tablespaces provide a way to organize and manage data at a higher level than individual files or tables.
+Data Files: Each tablespace consists of one or more data files, which are physical files on disk that store the actual data. 
+When you create a tablespace, you specify the data files associated with it.
+
+Types of Tablespaces:
+Permanent Tablespaces: Used to store persistent data. Most user data is stored here.
+Temporary Tablespaces: Used for temporary data, such as sorting operations and intermediate results. They are cleared when the session ends.
+
+Undo Tablespaces: Used to store undo data, which is necessary for transaction management and recovery.
+Management: Tablespaces can be managed independently, allowing for flexibility in allocating storage and managing space usage. 
+You can add or remove data files, resize them, and monitor their usage.
+Default Tablespace: Each user can have a default tablespace where their objects are created unless specified otherwise.
+
+-----------------------------------------------------------------------------------------------
+
+
+Common Table Expressions (CTE) in Oracle
+
+A Common Table Expression (CTE) in Oracle is a powerful feature that allows you to define a temporary result set that can be referenced within a 
+single SQL statement. CTEs enhance the readability and maintainability of complex queries by breaking them into modular, named subqueries.
+
+WITH cte_name AS (
+    -- Your query here
+)
+SELECT * FROM cte_name;
+
+WITH cte1 AS (
+    -- First query
+), cte2 AS (
+    -- Second query
+)
+SELECT * FROM cte1 JOIN cte2 ON cte1.id = cte2.id;
+
+Benefits of Using CTEs
+
+Improved Readability: CTEs make complex queries easier to read and understand.
+Modularity: You can break down complex logic into simpler, reusable components.
+Recursive Queries: CTEs can be recursive, allowing for operations like traversing hierarchical data
+
+
+-----------------------------------------------------------
+
+OPEN-FOR in Dynamic SQL in Oracle
+
+The OPEN-FOR statement in Oracle PL/SQL is used to associate a cursor variable with a dynamic SQL query. This allows you to execute a query that is constructed at runtime and retrieve multiple rows of data.
+
+Key Features of OPEN-FOR
+Associates a Cursor Variable: It links a cursor variable (a REF CURSOR) to a SQL SELECT statement.
+Allocates Resources: It allocates the necessary database resources to process the query.
+Positions the Cursor: The cursor is positioned before the first row of the result set, ready for fetching.
+
+cursor_variable: A REF CURSOR variable that will hold the result set.
+dynamic_sql_statement: A string that contains the SQL SELECT statement.
+USING: Optional clause to specify bind variables for the placeholders in the SQL statement.
+
+DECLARE
+    TYPE emp_ref_cursor IS REF CURSOR; -- Define a REF CURSOR type
+    emp_cursor emp_ref_cursor;          -- Declare a cursor variable
+    emp_record employees%ROWTYPE;       -- Record variable to hold fetched data
+    sql_stmt VARCHAR2(200);              -- Variable to hold the dynamic SQL statement
+    job_title VARCHAR2(15) := 'CLERK';   -- Example bind variable
+
+BEGIN
+    -- Construct the dynamic SQL statement
+    sql_stmt := 'SELECT * FROM employees WHERE job = :job';
+
+    -- Open the cursor for the dynamic SQL statement
+    OPEN emp_cursor FOR sql_stmt USING job_title;
+
+    -- Fetch and process the results
+    LOOP
+        FETCH emp_cursor INTO emp_record;
+        EXIT WHEN emp_cursor%NOTFOUND; -- Exit when no more rows are found
+        DBMS_OUTPUT.PUT_LINE(emp_record.employee_id || ' ' || emp_record.first_name);
+    END LOOP;
+
+    -- Close the cursor
+    CLOSE emp_cursor;
+END;
+
+
+-------------------------------------------------------------------------------
+
+What is a Bind Variable in Oracle?
+
+A bind variable is a placeholder in a SQL statement that allows you to pass values dynamically at runtime. In Oracle SQL and PL/SQL, 
+bind variables are represented by a colon (:) followed by a name (e.g., :employee_id). They are commonly used in SQL queries, PL/SQL blocks, and stored procedures.
+
+Key Benefits of Using Bind Variables:
+Performance Improvement:
+Reduced Parsing: Using bind variables helps avoid hard parsing for each execution of a query. When the same query structure is 
+reused with different values, Oracle can reuse the execution plan, leading to faster performance.
+Soft Parsing: This means that the database can execute the query more efficiently by not having to recompile it each time.
+Security:
+Protection Against SQL Injection: Bind variables help prevent SQL injection attacks by separating the SQL code from the data. 
+Since the database treats the bind variable as a parameter, it reduces the risk of malicious input being executed as part of the SQL statement.
+
+Code Reusability:
+
+Bind variables allow you to write more generic SQL statements that can be reused with different input values.
+
+DECLARE
+    v_employee_id NUMBER := 101; -- Example bind variable value
+    v_employee_name VARCHAR2(100);
+BEGIN
+    SELECT name INTO v_employee_name
+    FROM employees
+    WHERE employee_id = :employee_id; -- Bind variable placeholder
+
+    DBMS_OUTPUT.PUT_LINE('Employee Name: ' || v_employee_name);
+END;
+
+--------------------------
+
+performance tunning in oracle
+
+1. Optimize SQL Statements
+Indexes: Ensure appropriate indexes are in place. Use composite indexes for queries involving multiple columns.
+Statistics: Keep table and index statistics up-to-date using the DBMS_STATS package.
+Execution Plans: Analyze execution plans with EXPLAIN PLAN and the SQL Trace facility with TKPROF to identify bottlenecks1.
+
+2. Use Bulk Operations
+Bulk Collect: Use BULK COLLECT to fetch multiple rows in a single context switch, reducing overhead.
+FORALL: Use FORALL for bulk DML operations to minimize loop overhead2.
+
+3. Efficient PL/SQL Coding
+Avoid Unnecessary Loops: Minimize the use of loops, especially nested loops, which can be costly.
+Use Bind Variables: Bind variables help in reusing execution plans and reducing parsing time.
+Subprogram Inlining: Use the PRAGMA INLINE directive to inline frequently called subprograms, reducing call overhead1.
+
+4. Profiling and Tracing
+PL/SQL Profiler: Use the PL/SQL hierarchical profiler to identify performance hotspots in your code.
+Tracing: Enable tracing to gather detailed execution statistics and identify slow-running queries2.
+
+5. Optimize Dynamic SQL
+EXECUTE IMMEDIATE: Use EXECUTE IMMEDIATE judiciously and prefer static SQL when possible to avoid the overhead of parsing dynamic SQL2.
+
+6. Use Efficient Data Types
+PLS_INTEGER: Use PLS_INTEGER for integer arithmetic as it is faster than NUMBER.
+BINARY_FLOAT/BINARY_DOUBLE: Use these data types for floating-point arithmetic to improve performance2.
+
+7. Minimize Context Switches
+PL/SQL and SQL Context Switches: Reduce context switches between PL/SQL and SQL by using bulk operations and minimizing SQL calls within loops2.
+
+
+---------hints in oracle for performance
+
+1. Single-Table Hints
+
+Examples: INDEX, USE_NL
+
+SELECT /*+ INDEX(emp emp_idx) */ empno, ename FROM emp WHERE deptno = 10;
+
+2. Multi-Table Hints
+
+Examples: LEADING, USE_MERGE
+
+SELECT /*+ LEADING(emp1 emp2) USE_NL(emp1) */ emp1.ename, emp2.ename FROM emp emp1, emp emp2 WHERE emp1.mgr = emp2.empno;
+
+3. Query Block Hints
+
+Examples: STAR_TRANSFORMATION, UNNEST
+
+SELECT /*+ STAR_TRANSFORMATION */ empno, ename FROM emp WHERE deptno = 10;
+
+
+4. Statement Hints
+
+Examples: ALL_ROWS, FIRST_ROWS
+
+SELECT /*+ ALL_ROWS */ empno, ename FROM emp WHERE deptno = 10;
+ 
+
+----------------explain plan
+
+
+The EXPLAIN PLAN statement in Oracle is used to display the execution plan of a SQL query.
+This plan shows the sequence of operations that the database performs to execute the query, 
+which can help in understanding and optimizing the query’s performance.
+
+
+it Shows index operation like full scan, unique scan, fast full scan.
+it show cost and bytes used by select query. 
+
+
+-----------------
+
+what is procedure?
+
+A procedure in Oracle is a named PL/SQL block that performs a specific task or set of tasks. 
+Unlike functions, procedures do not return a value but can return multiple values via OUT parameters. 
+They are often used to execute a series of SQL or PL/SQL statements.
+
+Structure of an Oracle Procedure
+A procedure typically consists of the following sections:
+
+Header: Defines the name of the procedure and any input/output parameters.
+Declarative Section: Optional; used for declaring variables and cursors.
+Executable Section: Contains the logic and SQL statements that the procedure will execute.
+Exception Section: Optional; handles exceptions that occur during the execution of the procedure.
+
+
+-------------
+
+
+what is function?
+
+
+A function in Oracle is a named PL/SQL block that performs a specific task and returns a single value.
+Functions are similar to procedures, but they are designed to return a value and can be used in SQL statements.
+
+Structure of an Oracle Function
+A function typically consists of the following sections:
+
+Header: Defines the name of the function, any input parameters, and the return type.
+Declarative Section: Optional; used for declaring variables and cursors.
+Executable Section: Contains the logic and SQL statements that the function will execute.
+Exception Section: Optional; handles exceptions that occur during the execution of the function.
+
+
+----------
+
+what is cursor?
+
+
+In Oracle, a cursor is a pointer that allows you to process multiple records from SQL query one at a time. 
+Cursors are essential for handling query results in PL/SQL, especially when dealing with multiple rows.
+
+Types of Cursors
+
+Implicit Cursors: Automatically created by Oracle whenever an SQL statement is executed. 
+                  These are managed internally by Oracle and are used for single-row queries like SELECT INTO, INSERT, UPDATE, and DELETE.
+
+Explicit Cursors: Defined by the programmer for queries that return multiple rows. 
+                  They provide more control over the context area and allow you to fetch rows one at a time.
+
+
+------------
+
+what is implicit cursor
+
+
+An implicit cursor in Oracle is automatically created by the database whenever an SQL statement is executed. 
+These cursors are managed internally by Oracle and are used for single-row queries like SELECT INTO, INSERT, UPDATE, and DELETE.
+
+SQL%FOUND: Returns TRUE if the SQL statement affected one or more rows.
+SQL%NOTFOUND: Returns TRUE if the SQL statement affected no rows.
+SQL%ROWCOUNT: Returns the number of rows affected by the SQL statement.
+SQL%ISOPEN: Always returns FALSE for implicit cursors because they are automatically closed after the SQL statement is executed.
+
+-----------------------
+
+
+what is explicit cursor
+
+An explicit cursor in Oracle is a named pointer to a private SQL area that stores information for processing a specific query or DML statement. Explicit cursors are used for queries that return multiple rows, giving you more control over the context area and allowing you to fetch rows one at a time.
+
+
+Steps to Use an Explicit Cursor
+Declare the Cursor: Define the cursor and the SQL query it will execute.
+Open the Cursor: Execute the query and establish the result set.
+Fetch from the Cursor: Retrieve each row from the result set.
+Close the Cursor: Release the resources associated with the cursor.
+
+
+DECLARE
+    CURSOR emp_cursor IS
+        SELECT first_name, last_name FROM employees;
+    emp_record emp_cursor%ROWTYPE;
+BEGIN
+    OPEN emp_cursor;
+    LOOP
+        FETCH emp_cursor INTO emp_record;
+        EXIT WHEN emp_cursor%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE('Employee: ' || emp_record.first_name || ' ' || emp_record.last_name);
+    END LOOP;
+    CLOSE emp_cursor;
+END;
+
+
+----------------------------
+
+what is exception in oracle
+
+
+In Oracle, an exception is an error condition that disrupts the normal flow of execution in a PL/SQL block, subprogram, or package. 
+Exceptions can be caused by various factors such as coding mistakes, hardware failures, or unexpected conditions. 
+Handling exceptions properly is crucial to ensure that your program can manage errors gracefully and continue running.
+
+Types of Exceptions
+
+Predefined Exceptions: These are standard exceptions defined by Oracle. 
+
+Examples include NO_DATA_FOUND, TOO_MANY_ROWS, and ZERO_DIVIDE.
+
+User-Defined Exceptions: These are custom exceptions defined by the programmer to handle specific error 
+                         conditions that are not covered by predefined exceptions.
+Exception Handling
+
+To handle exceptions in PL/SQL, you use the EXCEPTION section of a PL/SQL block. 
+This section contains handlers for different exceptions that might occur during the execution of the block.
+
+BEGIN
+    -- Executable Section
+    -- SQL and PL/SQL code here
+EXCEPTION
+    WHEN exception_name1 THEN
+        -- Exception handler for exception_name1
+    WHEN exception_name2 THEN
+        -- Exception handler for exception_name2
+    WHEN OTHERS THEN
+        -- Handler for all other exceptions
+END;
+
+------------------------------------
+
+what is predefine exception
+
+
+Predefined exceptions in Oracle are internally defined exceptions that have predefined names and are automatically 
+raised by the runtime system when certain error conditions occur. These exceptions are declared globally in 
+the package STANDARD, which means they are always available for use in your PL/SQL code without needing to be explicitly declared.
+
+Common Predefined Exceptions
+
+Here are some of the most commonly used predefined exceptions:
+
+NO_DATA_FOUND: Raised when a SELECT INTO statement returns no rows.
+TOO_MANY_ROWS: Raised when a SELECT INTO statement returns more than one row.
+ZERO_DIVIDE: Raised when an attempt is made to divide a number by zero.
+INVALID_CURSOR: Raised when an illegal cursor operation is attempted.
+CURSOR_ALREADY_OPEN: Raised when an attempt is made to open an already open cursor.
+DUP_VAL_ON_INDEX: Raised when an attempt is made to insert a duplicate value into a column with a unique index.
+
+
+
+--------------------
+
+what is user define exception
+
+A user-defined exception in Oracle is a custom exception that you define to handle specific error conditions that are not covered by predefined exceptions. These exceptions allow you to manage errors more precisely and provide meaningful error messages tailored to your application’s needs.
+
+Steps to Create and Use User-Defined Exceptions
+
+Declare the Exception: Define the exception in the declarative section of your PL/SQL block, subprogram, or package.
+Raise the Exception: Use the RAISE statement to trigger the exception when a specific condition occurs.
+Handle the Exception: Write an exception handler in the EXCEPTION section to manage the error.
+
+
+DECLARE
+    my_exception EXCEPTION; -- Declare the exception
+BEGIN
+    -- Some executable code
+    IF some_condition THEN
+        RAISE my_exception; -- Raise the exception
+    END IF;
+EXCEPTION
+    WHEN my_exception THEN
+        -- Handle the exception
+        DBMS_OUTPUT.PUT_LINE('A custom error occurred.');
+END;
+
+
+----------------------------
+
+
+what is records and object
+
+A record in Oracle is a composite data structure that allows you to group related data items together. 
+Each item in a record is called a field, and fields can have different data types. Records are useful for handling 
+rows of data and can be used to simplify the management of related data.
+
+Creating and Using Records
+Declaring a Record Type: You can define a record type using the TYPE statement.
+Declaring a Record Variable: Once the type is defined, you can declare a variable of that type.
+Accessing Fields: You can access and manipulate the fields of a record using dot notation.
+
+DECLARE
+    TYPE employee_record IS RECORD (
+        emp_id NUMBER,
+        emp_name VARCHAR2(50),
+        emp_salary NUMBER
+    );
+    emp_rec employee_record;
+BEGIN
+    -- Assign values to the record fields
+    emp_rec.emp_id := 101;
+    emp_rec.emp_name := 'John Doe';
+    emp_rec.emp_salary := 50000;
+
+    -- Access and display the record fields
+    DBMS_OUTPUT.PUT_LINE('Employee ID: ' || emp_rec.emp_id);
+    DBMS_OUTPUT.PUT_LINE('Employee Name: ' || emp_rec.emp_name);
+    DBMS_OUTPUT.PUT_LINE('Employee Salary: ' || emp_rec.emp_salary);
+END;
+
+
+Objects in Oracle, also known as object types or user-defined types (UDTs), allow you to model real-world entities as objects in the database. These objects can encapsulate both data (attributes) and methods (procedures and functions) that operate on the data.
+
+Creating and Using Objects
+Defining an Object Type: Use the CREATE TYPE statement to define an object type.
+Creating an Object Table: Use the CREATE TABLE statement to create a table that stores objects of the defined type.
+Manipulating Objects: You can insert, update, and query objects using SQL and PL/SQL
+
+
+-- Define an object type
+CREATE TYPE employee_type AS OBJECT (
+    emp_id NUMBER,
+    emp_name VARCHAR2(50),
+    emp_salary NUMBER,
+    MEMBER FUNCTION get_annual_salary RETURN NUMBER
+);
+
+-- Implement the member function
+CREATE TYPE BODY employee_type AS
+    MEMBER FUNCTION get_annual_salary RETURN NUMBER IS
+    BEGIN
+        RETURN emp_salary * 12;
+    END;
+END;
+/
+
+-- Create a table of the object type
+CREATE TABLE employees OF employee_type;
+
+-- Insert an object into the table
+INSERT INTO employees VALUES (employee_type(101, 'John Doe', 50000));
+
+-- Query the table and use the member function
+SELECT e.emp_name, e.get_annual_salary() AS annual_salary
+FROM employees e;
+
+-----------------------------
+what is collection
+
+In Oracle, a collection is an ordered group of elements that share the same data type. Collections are useful for storing and manipulating sets of data in PL/SQL. They allow you to handle multiple values as a single unit, making it easier to manage and process data.
+
+Types of Collections
+Oracle provides three main types of collections:
+
+Associative Arrays (Index-by Tables): These are key-value pairs where each element is identified by a unique key, which can be either a string or a number.
+Nested Tables: These are similar to arrays but can be sparse, meaning they can have gaps between elements. They are useful for representing sets of data that can grow dynamically.
+Varrays (Variable-Size Arrays): These have a fixed maximum size and are always dense, meaning there are no gaps between elements. They are useful when you know the maximum number of elements in advance.
+
+* Associative Array
+
+DECLARE
+    TYPE emp_array IS TABLE OF VARCHAR2(50) INDEX BY PLS_INTEGER;
+    employees emp_array;
+BEGIN
+    employees(1) := 'John Doe';
+    employees(2) := 'Jane Smith';
+    DBMS_OUTPUT.PUT_LINE('Employee 1: ' || employees(1));
+    DBMS_OUTPUT.PUT_LINE('Employee 2: ' || employees(2));
+END;
+
+* Nested Table
+
+DECLARE
+    TYPE num_table IS TABLE OF NUMBER;
+    numbers num_table := num_table(1, 2, 3, 4, 5);
+BEGIN
+    FOR i IN 1..numbers.COUNT LOOP
+        DBMS_OUTPUT.PUT_LINE('Number: ' || numbers(i));
+    END LOOP;
+END;
+
+
+* Varray
+
+DECLARE
+    TYPE varray_type IS VARRAY(5) OF VARCHAR2(50);
+    colors varray_type := varray_type('Red', 'Green', 'Blue');
+BEGIN
+    FOR i IN 1..colors.COUNT LOOP
+        DBMS_OUTPUT.PUT_LINE('Color: ' || colors(i));
+    END LOOP;
+END;
+
+Benefits of Using Collections
+Efficiency: Collections allow you to process multiple elements in a single operation, which can improve performance.
+Flexibility: They can be used to store and manipulate sets of data dynamically.
+Ease of Use: Collections simplify the code needed to handle multiple values, making it more readable and maintainable.
+
+
+------------------------
+
+what is packages
+
+
+In Oracle, a package is a schema object that groups logically related PL/SQL types, variables, constants, subprograms (procedures and functions), cursors, and exceptions. Packages help organize and encapsulate related functionalities, making your code more modular, reusable, and maintainable.
+
+Structure of a Package
+A package typically consists of two parts:
+
+Package Specification: This is the interface to the package. It declares the public elements (procedures, functions, variables, etc.) that can be accessed from outside the package.
+Package Body: This contains the implementation of the procedures and functions declared in the specification. It can also include private elements that are not accessible from outside the package.
+
+CREATE OR REPLACE PACKAGE employee_pkg IS
+    PROCEDURE add_employee(p_emp_id NUMBER, p_name VARCHAR2, p_salary NUMBER);
+    FUNCTION get_employee_salary(p_emp_id NUMBER) RETURN NUMBER;
+END employee_pkg;
+
+---------------------
+
+what is bulk collect
+
+
+In Oracle, BULK COLLECT is a feature that allows you to fetch multiple rows from a SQL query into a PL/SQL collection (such as an array or nested table) in a single operation. This can significantly improve the performance of data retrieval operations by reducing the number of context switches between the SQL and PL/SQL engines.
+
+Key Benefits of BULK COLLECT
+Reduced Context Switching: By fetching multiple rows at once, BULK COLLECT minimizes the number of context switches between the SQL and PL/SQL engines, which enhances performance.
+Improved Efficiency: Executing a single BULK COLLECT statement is often more efficient than executing multiple individual queries.
+
+
+DECLARE
+    TYPE collection_type IS TABLE OF table_name%ROWTYPE;
+    collection_name collection_type;
+BEGIN
+    SELECT column1, column2, ...
+    BULK COLLECT INTO collection_name
+    FROM table_name
+    WHERE condition;
+    
+    -- Process the data in the collection
+END;
+
+
+-----------------------
+
+what is forall
+
+
+
+The FORALL statement in Oracle is used to execute a DML statement (such as INSERT, UPDATE, or DELETE) multiple times with different values from a collection. This can significantly improve performance by reducing the overhead associated with executing multiple individual DML statements within a loop.
+
+Key Features of FORALL
+Efficiency: FORALL is much faster than a traditional FOR loop because it minimizes context switches between the PL/SQL and SQL engines.
+Bulk Processing: It allows you to perform bulk operations on collections, making it ideal for handling large volumes of data.
+
+FORALL index IN lower_bound..upper_bound
+    dml_statement;
+
+
+----------------
+
+what is save exception
+
+
+In Oracle, the SAVE EXCEPTIONS clause is used with the FORALL statement to handle exceptions that occur during bulk DML operations. When you use SAVE EXCEPTIONS, Oracle continues to execute the remaining DML statements even if some of them fail. After the FORALL statement completes, you can examine the exceptions that were raised using the SQL%BULK_EXCEPTIONS collection.
+
+Key Features of SAVE EXCEPTIONS
+Continued Execution: Allows the FORALL statement to continue executing subsequent DML operations even if some operations fail.
+Error Logging: Captures details about each exception, including the index of the failed operation and the error code.
+
+FORALL index IN lower_bound..upper_bound SAVE EXCEPTIONS
+    dml_statement;
+
+------------------------------
+
+what is trigger
+
+A trigger in Oracle is a named PL/SQL block that is stored in the database and automatically executed (or “fired”) in response to a specified event. Triggers can be used to enforce business rules, maintain audit trails, and perform complex validations.
+
+Types of Triggers
+
+DML Triggers: These are fired by Data Manipulation Language (DML) statements such as INSERT, UPDATE, or DELETE on a table or view.
+DDL Triggers: These are fired by Data Definition Language (DDL) statements such as CREATE, ALTER, or DROP.
+INSTEAD OF Triggers: These are used on views to perform DML operations instead of the actual DML statement.
+System Triggers: These are fired by system events such as database startup or shutdown, user login or logout.
+
+Structure of a Trigger
+
+A trigger consists of two main parts:
+
+Trigger Header: Specifies the name of the trigger, the triggering event, and the table or view on which the trigger is defined.
+Trigger Body: Contains the PL/SQL code that defines the actions to be performed when the trigger fires.
+
+CREATE OR REPLACE TRIGGER trigger_name
+    {BEFORE | AFTER | INSTEAD OF} triggering_event
+    ON table_name
+    [FOR EACH ROW]
+    [WHEN (condition)]
+DECLARE
+    -- Declaration statements (optional)
+BEGIN
+    -- Executable statements
+EXCEPTION
+    -- Exception handling statements (optional)
+END;
+
+--------------------------
+
+what is mutating trigger and how to avoid mutating trigger
+
+
+A mutating trigger in Oracle is a trigger that causes a mutating table error. This error occurs when a trigger tries to query or modify a table that is already being modified by the statement that fired the trigger. The error is raised to maintain data integrity and prevent unexpected results.
+
+Causes of Mutating Trigger Error
+The mutating table error typically occurs in the following scenarios:
+
+Row-Level Triggers: When a row-level trigger tries to read or modify the table that caused the trigger to fire.
+Self-Referencing Triggers: When a trigger on a table tries to perform operations on the same table.
+
+Example of a Mutating Trigger Error
+
+CREATE OR REPLACE TRIGGER customers_credit_policy_trg
+AFTER INSERT OR UPDATE ON customers
+FOR EACH ROW
+DECLARE
+    l_max_credit customers.credit_limit%TYPE;
+BEGIN
+    SELECT MIN(credit_limit) * 5 INTO l_max_credit
+    FROM customers
+    WHERE credit_limit > 0;
+
+    IF :NEW.credit_limit > l_max_credit THEN
+        UPDATE customers
+        SET credit_limit = l_max_credit
+        WHERE customer_id = :NEW.customer_id;
+    END IF;
+
+END;
+
+
+Avoiding Mutating Trigger Errors
+
+To avoid mutating trigger errors, you can use one of the following approaches:
+
+* Compound Triggers: Available from Oracle 11g onwards, compound triggers allow you to define multiple timing points within a single trigger, which helps in avoiding mutating table errors.
+
+
+CREATE OR REPLACE TRIGGER customers_credit_policy_trg
+FOR UPDATE OR INSERT ON customers
+COMPOUND TRIGGER
+    TYPE r_customers_type IS RECORD (
+        customer_id customers.customer_id%TYPE,
+        credit_limit customers.credit_limit%TYPE
+    );
+    TYPE t_customers_type IS TABLE OF r_customers_type INDEX BY PLS_INTEGER;
+    t_customer t_customers_type;
+AFTER EACH ROW IS
+BEGIN
+    t_customer(t_customer.COUNT + 1).customer_id := :NEW.customer_id;
+    t_customer(t_customer.COUNT).credit_limit := :NEW.credit_limit;
+END AFTER EACH ROW;
+AFTER STATEMENT IS
+    l_max_credit customers.credit_limit%TYPE;
+BEGIN
+    SELECT MIN(credit_limit) * 5 INTO l_max_credit
+    FROM customers
+    WHERE credit_limit > 0;
+
+    FOR i IN 1..t_customer.COUNT LOOP
+        IF t_customer(i).credit_limit > l_max_credit THEN
+            UPDATE customers
+            SET credit_limit = l_max_credit
+            WHERE customer_id = t_customer(i).customer_id;
+        END IF;
+    END LOOP;
+END AFTER STATEMENT;
+END customers_credit_policy_trg;
+
+* Autonomous Transactions: Use autonomous transactions to perform independent transactions within a trigger. This approach can be complex and should be used with caution.
+
+
+CREATE OR REPLACE TRIGGER customers_credit_policy_trg
+AFTER INSERT OR UPDATE ON customers
+FOR EACH ROW
+DECLARE
+    PRAGMA AUTONOMOUS_TRANSACTION;
+BEGIN
+    -- Perform operations in an autonomous transaction
+    COMMIT;
+END;
+
+* Statement-Level Triggers: Use statement-level triggers instead of row-level triggers to avoid mutating table errors. However, this might not be suitable for all scenarios.
+
+-------------------------------
+
+what is index
+
+
+An index in Oracle is a schema object that improves the speed of data retrieval operations on a table. Indexes are used to quickly locate rows within a table without having to scan the entire table. They are particularly useful for enhancing the performance of queries that filter or sort data based on indexed columns.
+
+Types of Indexes
+
+B-Tree Indexes: The most common type of index, suitable for high-cardinality columns (columns with many unique values). B-tree indexes maintain a balanced tree structure, ensuring efficient access to data.
+
+Bitmap Indexes: Ideal for low-cardinality columns (columns with few unique values). Bitmap indexes use bitmaps to represent the presence of values, making them efficient for complex queries involving multiple conditions.
+
+Function-Based Indexes: These indexes are based on expressions or functions applied to one or more columns. They are useful for queries that involve complex calculations or transformations.
+
+Composite Indexes: Indexes that include multiple columns. They are useful for queries that filter or sort data based on combinations of columns.
+
+Unique Indexes: Ensure that the indexed columns contain unique values. They are automatically created when a unique constraint or primary key is defined on a table.
+
+Domain Indexes: Custom indexes created for specific application requirements, often using user-defined functions.
+
+CREATE INDEX emp_last_name_idx ON employees (last_name);
+
+
+Benefits of Using Indexes
+
+Faster Query Performance: Indexes significantly speed up data retrieval operations by reducing the amount of data that needs to be scanned.
+Efficient Sorting: Indexes can improve the performance of queries that involve sorting operations.
+Enforcing Uniqueness: Unique indexes help enforce data integrity by ensuring that indexed columns contain unique values.
+Considerations
+Maintenance Overhead: Indexes require maintenance, especially when data in the indexed columns is frequently updated. This can impact the performance of DML operations (INSERT, UPDATE, DELETE).
+Storage Space: Indexes consume additional storage space. It’s important to balance the benefits of faster query performance with the storage and maintenance costs.
+ 
+ 
+
+Without an index:
+
+ 
+
+SELECT * FROM employees WHERE last_name = 'Smith';
+ 
+This query requires a full table scan, which can be slow for large tables.
+
+With an index:
+
+ 
+
+CREATE INDEX emp_last_name_idx ON employees (last_name);
+
+SELECT * FROM employees WHERE last_name = 'Smith';
+
+
+--------------------------
+
+what is view?
+
+A view in Oracle is a virtual table that is based on the result of a SQL query. Unlike a physical table, a view does not store data itself; instead, it dynamically retrieves data from the underlying base tables whenever it is queried. Views are used to simplify complex queries, enhance security, and provide a level of abstraction over the database schema.
+
+Key Features of Views
+
+Virtual Table: A view behaves like a table in SQL queries, but it does not store data. It is essentially a stored query that is executed each time the view is accessed.
+Simplification: Views can simplify complex queries by encapsulating them into a single object. This makes it easier to reuse and maintain the query logic.
+Security: Views can restrict access to specific columns or rows in a table, providing a way to control data visibility and access.
+Data Abstraction: Views provide a level of abstraction, allowing users to interact with data without needing to know the underlying table structure.
+
+
+CREATE VIEW employee_view AS
+SELECT employee_id, first_name, last_name, department_id
+FROM employees
+WHERE department_id = 10;
+
+
+---------------------------
+
+what is dynamic sql
+
+Dynamic SQL in Oracle is a programming technique that allows you to construct and execute SQL statements dynamically at runtime. 
+This is particularly useful when you need to execute SQL statements that are not known until runtime, such as when building flexible and general-purpose applications.
+
+Key Features of Dynamic SQL
+
+Flexibility: Dynamic SQL allows you to create SQL statements dynamically based on input parameters or other runtime conditions.
+Versatility: It can handle SQL statements that are not supported by static SQL, such as DDL statements (e.g., CREATE, ALTER, DROP).
+Runtime Execution: SQL statements are constructed and executed at runtime, providing the ability to adapt to changing requirements.
+
+-----------------------
+
+what kind of development have you done in your project?
+
+In my current project, I am responsible for both development and fixing production issues. Additionally, I am tasked with reducing manual work by implementing automated processes. This involves database development, such as modifying procedures, functions, and triggers. I also create new procedures, functions, and cursors, modify table structures, alter tables by adding new columns, and create triggers on tables to maintain history.
+Last year, the IRDA changed its rules and guidelines, which all insurance companies must follow. As a result, I have been modifying existing logic to comply with the new IRDA guidelines. These changes include updates to the payment process rates, Aadhaar-PAN linking rules, and many other aspects also i got awarded for my efforts this development.
+
+performance issue
+insertion issue for bulk data count up to 30Lakhs
+exceptions in procedures not handled properly 
+reduced manual work by automating process
+
+
+what is the daily routine of your work?
+
+first we had a standup meting in morning. in this meting we discuss about current development challenges and development while doing this we have follow deadline of development date. then we start our work if any user got any issue while working on web application he raise ticked. then i have resolve his issue within 3 days. also providing data to user if they needed.
+
+what kind of challenges did you face in your current project?
+
+In my role as a PL/SQL developer, I encountered several challenges that required innovative solutions and a proactive approach One of the main challenges was optimizing SQL queries and PL/SQL code to improve performance. Debugging complex PL/SQL code was another challenge. I utilized debugging tools, wrote extensive test cases, and employed logging techniques to trace and resolve issues efficiently. Managing large datasets posed performance and memory constraints. I implemented bulk processing techniques, such as BULK COLLECT and FORALL, to handle large volumes of data more efficiently. Ensuring code quality and consistency across the team was crucial. I followed coding standards, conducted code reviews, and used version control systems. Ensuring data security and compliance with regulations was essential. I implemented encryption, access controls, and auditing mechanisms to protect sensitive data.
+
+performance issue
+insertion issue for bulk data count upto 30Lakhs
+exceptions in procedures not handled properly 
+reduced manual work by automating process
+
+
+
+------------------
+
+implicit cursor
+
+BEGIN
+    UPDATE emp
+    SET sal = sal * 1.10;
+     DBMS_OUTPUT.PUT_LINE(SQL%ROWCOUNT);
+ commit;   
+END;
+
+
+---------------------
+
+explicit cursor
+
+declare
+
+cursor c1 is select * from emp;
+v_details emp%rowtype;
+
+begin
+  
+open c1;
+loop
+fetch c1 into v_details;  
+exit when c1%notfound;
+
+end loop;
+dbms_output.put_line(v_details.ename);
+close c1;
+end;
+ 
+
+---------------------------
+
+parameterized cursor
+
+declare
+
+cursor c1 is select * from emp where empno=&n;
+v_details emp%rowtype;
+
+begin
+  
+open c1;
+loop
+fetch c1 into v_details;  
+exit when c1%notfound;
+
+end loop;
+dbms_output.put_line(v_details.ename);
+close c1;
+end;
+
+-----------------------------
+
+ref cursor
+
+1)weakly ref cursor 
+
+declare
+ type t1 is ref cursor 
+ v_ref t1;
+
+v_det emp%rowtype;
+v_dept dept%rowtype;
+
+begin
+  
+open v_ref for select * from emp;
+loop
+fetch v_ref into v_det;
+exit when v_ref%notfound;
+
+dbms_output.put_line(v_det.ename);
+end loop;
+close v_ref;
+ 
+end;
+
+2)strongly ref cursor
+
+declare
+ type t1 is ref cursor return emp%rowtype;
+ v_ref t1;
+
+v_det emp%rowtype;
+v_dept dept%rowtype;
+
+begin
+  
+open v_ref for select * from emp;
+loop
+fetch v_ref into v_det;
+exit when v_ref%notfound;
+
+dbms_output.put_line(v_det.ename);
+end loop;
+close v_ref;
+
+open v_ref for select * from dept;
+loop
+fetch v_ref into v_dept;
+exit when v_ref%notfound;
+  dbms_output.put_line(v_dept.dname);
+end loop;
+close v_ref;
+end;
+
+-----------
+
+for cursor
+
+ begin
+   
+ for i in(select * from emp)
+   loop
+     
+   dbms_output.put_line(i.ename);
+   end loop; 
+ end;
+
+
+--------------------------
+
+user define exception
+
+
+declare
+
+v_error exception;
+v_ename varchar2(100);
+
+pragma exception_init(v_error, -1000000);
+
+begin
+  
+select ename into v_ename from emp where empno='7839';
+
+IF v_ename='KING' then
+  raise_application_error(-20000,'appication error');
+end if;
+
+exception 
+  when v_error then
+    dbms_output.put_line('exception raised sucesfully'|| sqlerrm);
+end;
+
+
+
+--------------
+
+bulk collect with collection
+
+
+
+
+declare
+
+TYPE EmpRecTyp IS RECORD (
+        empno    emp.empno%TYPE,
+        e_name    emp.ename%TYPE,
+        job      emp.job%TYPE,
+        mgr      emp.mgr%TYPE,
+        hiredate emp.hiredate%TYPE,
+        sal      emp.sal%TYPE,
+        comm     emp.comm%TYPE,
+        deptno   emp.deptno%TYPE);
+
+type v_rev is table of EmpRecTyp;
+
+v_collection v_rev;
+
+cursor c1 is select * from emp;
+
+
+begin
+  
+open c1;
+loop
+  fetch c1 bulk collect into v_collection;
+  exit when c1%notfound;
+end loop;
+ for i in 1..v_collection.count
+   loop
+     
+   dbms_output.put_line(v_collection(i).e_name);
+   end loop;
+
+close c1;
+end;
+
+
+-----------------------------------
+
+
+associative array
+
+
+declare
+
+type t1 is table of varchar2(100) index by pls_integer;
+v_list t1;
+
+
+begin
+  
+v_list(1):='mangesh';
+v_list(2):='shubham';
+v_list(3):='sagar';
+v_list(4):='pankaj';
+
+for i in 1..v_list.count
+  loop
+    dbms_output.put_line(v_list(i));
+  end loop;
+end;
+
+
+-------------
+dynamic ref cursor
+
+declare
+
+v_eno number(10):='7839';
+v_sql varchar2(4000);
+
+type t1 is ref cursor;
+v_cur t1;
+
+v_det emp%rowtype;
+
+begin
+  
+v_sql:='select * from emp where EMPNO=:v_eno';
+
+open v_cur for v_sql using v_eno;
+loop
+  fetch v_cur into v_det;
+  exit when v_cur%Notfound;
+
+end loop;
+dbms_output.put_line(v_det.ename);
+close v_cur; 
+
+
+end;
+
+
+------------------
+difference between subquery and corelated query
+
+Key Differences:
+Execution Frequency: Subqueries are executed once, while correlated subqueries are executed multiple times (once for each row of the outer query).
+Independence: Subqueries can run independently, whereas correlated subqueries cannot.
+Use Case: Use subqueries for simpler, one-time calculations. Use correlated subqueries for row-by-row comparisons.
+
+--------------------
+what is analytical functions
+
+
+ROW_NUMBER(): Assigns a unique sequential integer to rows within a partition.
+RANK(): Assigns a rank to each row within a partition, with gaps in rank values for ties.
+DENSE_RANK(): Similar to RANK(), but without gaps in rank values for ties.
+LAG(): Provides access to a row at a given physical offset before the current row.
+select e.*, lag(sal,1,0) over(order by empno) from emp e
+
+LEAD(): Provides access to a row at a given physical offset after the current row.
+select e.*, lead(sal,1,0) over(order by empno) from emp e
+
+
+
+
+-----------------
+
+sql loader
+
+
+it is use to load external flat files data into database. to load data into database first we have to create two files control file and data file.
+when we load data into database it generates 3 types of log file. 
+log file, bad file and discard file.
+log file store the error numbers, error massages, rejected records, all loaded data, skipped data and rejected data details,
+while loading data some rejected records details stored in two file bad file and discard file.
+when problem occurred in flat file or in oracle database then those records are stored in bad file
+discard file store rejected records which are filtered by where conditions.
+ 
+steps to load data
+
+create control file with extension of file .ctl. submit that file into loader
+
+
+
+control file data :
+
+load data
+infile 'path of file'
+insert/append/truncate/replace   --- based on condition
+into table emp
+fields terminated by 'delimitername ,'
+(empno,ename,sal)
+
+data file :
+
+flat file (,) is delimiter
+
+101,abc,2000
+102,ncv,3000
+103,xyz,4000
+
+in cmd pass this : 
+
+sqlldr userid=username/password
+control=C:\murli.ctl
+
+--------------------
+
+employee who is earing more than manager
+
+
+select e1.empno as employee_id,
+       e1.ename as employee_name,
+       e2.empno as manager_id,
+       e2.ename as manager_name
+  from emp e1
+  join emp e2
+    on (e1.MGR = e2.empno)
+    and e1.sal>e2.sal
+------------------------------------
